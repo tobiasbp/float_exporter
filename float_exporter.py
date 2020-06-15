@@ -4,7 +4,7 @@ import argparse
 from datetime import date, timedelta
 import logging
 import os
-import random
+#import random
 import time
 
 from prometheus_client import start_http_server, Summary
@@ -38,6 +38,9 @@ ACCOUNT_TYPES = {
   5: 'billing'
   }
 
+# Days relative to today to report for
+REPORT_DAYS = 7
+
 class FloatCollector(object):
 
     def __init__(self, float_api):
@@ -49,13 +52,9 @@ class FloatCollector(object):
 
         logging.info("Recieved request.")
 
-        #scrape_start_time = datetime.now()
-
         # Assume no problems when getting data from Float
         float_error = False
 
-        start_date = date.today().isoformat()
-        end_date = (date.today() + timedelta(days=7)).isoformat()
 
         # Get data from Float
         float_accounts = self.api.get_all_accounts()
@@ -64,17 +63,18 @@ class FloatCollector(object):
         float_clients = self.api.get_all_clients()
         float_departments = self.api.get_all_departments()
 
+        # Get Float data for time periods
+        start_date = date.today().isoformat()
+        end_date = (date.today() + timedelta(days=REPORT_DAYS)).isoformat()
+
         float_people_reports = self.api.get_people_reports(
           start_date=start_date, end_date=end_date)
 
         float_project_reports = self.api.get_project_reports(
           start_date=start_date, end_date=end_date)
 
-        
         float_tasks = self.api.get_all_tasks(
           start_date=start_date, end_date=end_date)
-        #for t in float_tasks:
-        #  print(t['name'], t['start_date'], t['end_date'])
 
         # Number of tasks
         for p in [0, 1]:
@@ -82,10 +82,10 @@ class FloatCollector(object):
             g = GaugeMetricFamily(
                 'float_tasks',
                 'Number of tasks',
-                labels=['priority', 'status']
+                labels=['priority', 'status', 'days']
                 )
             g.add_metric(
-                [str(p), str(s_name)],
+                [str(p), str(s_name), str(REPORT_DAYS)],
                 len([t for t in float_tasks if t['priority'] == p and t['status'] == s_id])
                 )
             yield g
@@ -94,10 +94,10 @@ class FloatCollector(object):
         g = GaugeMetricFamily(
             'float_tasks_hours',
             'Sum of task hours',
-            labels=[]
+            labels=['days']
             )
         g.add_metric(
-            [],
+            [str(REPORT_DAYS)],
             sum([ float(t['hours']) for t in float_tasks ])
             )
         yield g
@@ -106,10 +106,10 @@ class FloatCollector(object):
         g = GaugeMetricFamily(
             'float_tasks_people',
             'Number of people with tasks',
-            labels=[]
+            labels=['days']
             )
         g.add_metric(
-            [],
+            [str(REPORT_DAYS)],
             sum(set([ t['people_id'] for t in float_tasks ]))
             )
         yield g
@@ -129,10 +129,10 @@ class FloatCollector(object):
                 g = GaugeMetricFamily(
                     'float_people_report_{}_hours'.format(m.lower()),
                     'Number of {} hours'.format(m.lower()),
-                    labels=['department_id']
+                    labels=['department_id', 'days']
                     )
                 g.add_metric(
-                    [str(d_id)],
+                    [str(d_id), str(REPORT_DAYS)],
                     sum([ float(r[m]) for r in float_people_reports if r['department_id'] == d_id])
                     )
                 yield g
@@ -141,10 +141,10 @@ class FloatCollector(object):
         g = GaugeMetricFamily(
             'float_project_report_clients',
             'Number of clients worked for',
-            labels=[]
+            labels=['days']
             )
         g.add_metric(
-            [],
+            [str(REPORT_DAYS)],
             len(set([ p['client_id'] for p in float_project_reports ]))
             )
         yield g
@@ -153,10 +153,10 @@ class FloatCollector(object):
         g = GaugeMetricFamily(
             'float_project_report_projects',
             'The number of projects worked for'.format(m),
-            labels=[]
+            labels=['days']
             )
         g.add_metric(
-            [],
+            [str(REPORT_DAYS)],
             len(set([ p['project_id'] for p in float_project_reports ]))
             )
         yield g
@@ -263,7 +263,7 @@ class FloatCollector(object):
             yield g
 
 
-        # Number of people in departments
+        # Department_id name mapping
         for d in float_departments:
             g = GaugeMetricFamily(
                 'float_department_id',
@@ -436,7 +436,7 @@ def main():
 
         # Run forever
         while True:
-          time.sleep(1)
+          time.sleep(3600)
 
     except KeyboardInterrupt:
         print(" Interrupted by keyboard")
