@@ -1,0 +1,4 @@
+# float_exporter configuration file 
+report_days:
+- 7
+- 14

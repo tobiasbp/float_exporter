@@ -4,7 +4,6 @@ import argparse
 from datetime import date, timedelta
 import logging
 import os
-#import random
 import time
 
 from prometheus_client import start_http_server, Summary
@@ -38,25 +37,15 @@ ACCOUNT_TYPES = {
   5: 'billing'
   }
 
-REPORT_PERIODS = [
-    { 'name': '7',
-      'start_date': date.today().isoformat(),
-      'end_date': (date.today() + timedelta(days=7)).isoformat()
-    },
-    { 'name': '14',
-      'start_date': date.today().isoformat(),
-      'end_date': (date.today() + timedelta(days=14)).isoformat()
-    }
-  ]
-
-# Days relative to today to report for
-REPORT_DAYS = 7
 
 class FloatCollector(object):
 
-    def __init__(self, float_api):
+    def __init__(self, float_api, report_periods):
 
+      # The Float API object
       self.api = float_api
+      # List of periods to report for
+      self.report_periods = report_periods
 
 
     def collect(self):
@@ -204,7 +193,8 @@ class FloatCollector(object):
         ###################
 
         # Loop through the periods to report for
-        for period in REPORT_PERIODS:
+        #for period in REPORT_PERIODS:
+        for period in self.report_periods:
           
           try:
             # People reports
@@ -331,6 +321,7 @@ def parse_args():
     # Defaults
     default_port = 9709
     default_log_level = 'INFO'
+    default_conf_file = '/etc/float_exporter.yml'
 
     # Parser object
     parser = argparse.ArgumentParser(
@@ -360,7 +351,7 @@ def parse_args():
         '--user-agent',
         metavar='FLOAT_USER_AGENT',
         required=False,
-        help=('String to report as User-Agent. '
+        help=('String to report as User-Agent when getting data from Float. '
           'Defaults to environment variable FLOAT_USER_AGENT'),
         default=os.environ.get('FLOAT_USER_AGENT', None)
     )
@@ -373,6 +364,15 @@ def parse_args():
         type=int,
         help='Port to recieve request on.',
         default=default_port
+    )
+
+    # Location of config file
+    parser.add_argument(
+        '--config-file',
+        metavar=default_conf_file,
+        required=False,
+        help='The file to read configuration from.',
+        default=default_conf_file
     )
 
     # Location of log file
@@ -462,7 +462,29 @@ def main():
           raise ValueError("You must supply a Float access token. "
             "Use environment variable FLOAT_ACCESS_TOKEN or flag --access-token")
 
-        logging.info("Starting float_exporter")
+        # get values from config or defaults
+        if args.config_file:
+          # Parse the config
+          c = parse_config(args.config_file)
+          # FIXME: Validate config
+          report_days = c['report_days']
+        else:
+          # The default report days
+          report_days = [7, 14]
+
+        # Store dictionaries defining periods here
+        report_periods = []
+
+        # Add the periods based on config
+        for d in report_days:
+          # Calculate days for the period
+          p = {
+            'name': str(d),
+            'start_date': date.today().isoformat(),
+            'end_date': (date.today() + timedelta(days=d)).isoformat()
+            }
+          # Add the period
+          report_periods.append(p)
 
         # Instantiate Float API
         float_api = FloatAPI(
@@ -471,8 +493,10 @@ def main():
             args.email,
             )
 
+        logging.info("Starting float_exporter")
+
         # Instantiate collector
-        REGISTRY.register(FloatCollector(float_api))
+        REGISTRY.register(FloatCollector(float_api, report_periods))
 
         # Listen for scrape requests.
         start_http_server(args.port)
