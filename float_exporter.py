@@ -38,6 +38,17 @@ ACCOUNT_TYPES = {
   5: 'billing'
   }
 
+REPORT_PERIODS = [
+    { 'name': '7',
+      'start_date': date.today().isoformat(),
+      'end_date': (date.today() + timedelta(days=7)).isoformat()
+    },
+    { 'name': '14',
+      'start_date': date.today().isoformat(),
+      'end_date': (date.today() + timedelta(days=14)).isoformat()
+    }
+  ]
+
 # Days relative to today to report for
 REPORT_DAYS = 7
 
@@ -52,114 +63,27 @@ class FloatCollector(object):
 
         logging.info("Recieved request.")
 
-        # Assume no problems when getting data from Float
-        float_error = False
-
+        # Metric for status on getting data from Float
+        float_up = GaugeMetricFamily(
+            'float_up',
+            'Is data beeing pulled from Float',
+            labels=[]
+            )
 
         # Get data from Float
-        float_accounts = self.api.get_all_accounts()
-        float_people = self.api.get_all_people()
-        float_projects = self.api.get_all_projects()
-        float_clients = self.api.get_all_clients()
-        float_departments = self.api.get_all_departments()
-
-        # Get Float data for time periods
-        start_date = date.today().isoformat()
-        end_date = (date.today() + timedelta(days=REPORT_DAYS)).isoformat()
-
-        float_people_reports = self.api.get_people_reports(
-          start_date=start_date, end_date=end_date)
-
-        float_project_reports = self.api.get_project_reports(
-          start_date=start_date, end_date=end_date)
-
-        float_tasks = self.api.get_all_tasks(
-          start_date=start_date, end_date=end_date)
-
-        # Number of tasks
-        for p in [0, 1]:
-          for s_id, s_name in TASK_STATUSES.items():
-            g = GaugeMetricFamily(
-                'float_tasks',
-                'Number of tasks',
-                labels=['priority', 'status', 'days']
-                )
-            g.add_metric(
-                [str(p), str(s_name), str(REPORT_DAYS)],
-                len([t for t in float_tasks if t['priority'] == p and t['status'] == s_id])
-                )
-            yield g
-
-        # Sum of task hours
-        g = GaugeMetricFamily(
-            'float_tasks_hours',
-            'Sum of task hours',
-            labels=['days']
-            )
-        g.add_metric(
-            [str(REPORT_DAYS)],
-            sum([ float(t['hours']) for t in float_tasks ])
-            )
-        yield g
-
-        # Number of people with tasks
-        g = GaugeMetricFamily(
-            'float_tasks_people',
-            'Number of people with tasks',
-            labels=['days']
-            )
-        g.add_metric(
-            [str(REPORT_DAYS)],
-            len(set([ t['people_id'] for t in float_tasks ]))
-            )
-        yield g
-
-        # People report
-        metrics = [
-          'overtime',
-          'billable',
-          'nonBillable',
-          'capacity',
-          'scheduled',
-          'unscheduled',
-          'timeoff'
-          ]
-        for m in metrics:
-            for d_id in [d['department_id'] for d in float_departments]:
-                g = GaugeMetricFamily(
-                    'float_people_report_{}_hours'.format(m.lower()),
-                    'Number of {} hours'.format(m.lower()),
-                    labels=['department_id', 'days']
-                    )
-                g.add_metric(
-                    [str(d_id), str(REPORT_DAYS)],
-                    sum([ float(r[m]) for r in float_people_reports if r['department_id'] == d_id])
-                    )
-                yield g
-
-        # Project report clients
-        g = GaugeMetricFamily(
-            'float_project_report_clients',
-            'Number of clients worked for',
-            labels=['days']
-            )
-        g.add_metric(
-            [str(REPORT_DAYS)],
-            len(set([ p['client_id'] for p in float_project_reports ]))
-            )
-        yield g
-
-        # Project report projects
-        g = GaugeMetricFamily(
-            'float_project_report_projects',
-            'The number of projects worked for'.format(m),
-            labels=['days']
-            )
-        g.add_metric(
-            [str(REPORT_DAYS)],
-            len(set([ p['project_id'] for p in float_project_reports ]))
-            )
-        yield g
+        try:
+          float_accounts = self.api.get_all_accounts()
+          float_people = self.api.get_all_people()
+          float_projects = self.api.get_all_projects()
+          float_clients = self.api.get_all_clients()
+          float_departments = self.api.get_all_departments()
+        except Exception as e:
+          logging.error("Exception when getting data from Float: {}"
+            .format(e))
+          # Report missing data and return
+          float_up.add_metric([], 0)
+          yield float_up
+          return
 
         # Number of accounts
         for a_id, a_name in ACCOUNT_TYPES.items():
@@ -217,8 +141,6 @@ class FloatCollector(object):
 
 
         # Budget
-        #for budget_type in set([p['budget_type'] for p in float_projects]):
-        # We need the list of types so we can report even if we have 0 occurrences
         for budget_type in [1,2,3]:
             g = GaugeMetricFamily(
                 'float_projects_budget',
@@ -277,19 +199,117 @@ class FloatCollector(object):
             yield g
 
 
-        # Metric for status on getting data from Float
-        float_up = GaugeMetricFamily(
-            'float_up',
-            'Is data beeing pulled from Float',
-            labels=[]
-            )
-        if float_error:
-            float_up.add_metric([], 0)
-        else:
-            float_up.add_metric([], 1)
-        yield float_up
+        # TIME BASED DATA #
+
+        # Loop through the periods to report for
+        for period in REPORT_PERIODS:
+
+          # People reports
+          float_people_reports = self.api.get_people_reports(
+            start_date=period['start_date'], end_date=period['end_date'])
+
+          # Project reports
+          float_project_reports = self.api.get_project_reports(
+            start_date=period['start_date'], end_date=period['end_date'])
+
+          # Tasks
+          float_tasks = self.api.get_all_tasks(
+            start_date=period['start_date'], end_date=period['end_date'])
+
+          # Number of tasks
+          for p in [0, 1]:
+            for s_id, s_name in TASK_STATUSES.items():
+              g = GaugeMetricFamily(
+                  'float_tasks',
+                  'Number of tasks',
+                  labels=['priority', 'status', 'days']
+                  )
+              g.add_metric(
+                  [str(p), s_name, period['name']],
+                  len([t for t in float_tasks if t['priority'] == p and t['status'] == s_id])
+                  )
+              yield g
+
+          # Sum of task hours
+          g = GaugeMetricFamily(
+              'float_tasks_hours',
+              'Sum of task hours',
+              labels=['days']
+              )
+          g.add_metric(
+              [period['name']],
+              sum([ float(t['hours']) for t in float_tasks ])
+              )
+          yield g
+
+          # Number of people with tasks
+          g = GaugeMetricFamily(
+              'float_tasks_people',
+              'Number of people with tasks',
+              labels=['days']
+              )
+          g.add_metric(
+              [period['name']],
+              len(set([ t['people_id'] for t in float_tasks ]))
+              )
+          yield g
+
+          # People report
+          metrics = [
+            'overtime',
+            'billable',
+            'nonBillable',
+            'capacity',
+            'scheduled',
+            'unscheduled',
+            'timeoff'
+            ]
+          for m in metrics:
+              for d_id in [d['department_id'] for d in float_departments]:
+                  g = GaugeMetricFamily(
+                      'float_people_report_{}_hours'.format(m.lower()),
+                      'Number of {} hours'.format(m.lower()),
+                      labels=['department_id', 'days']
+                      )
+                  g.add_metric(
+                      [str(d_id), period['name']],
+                      sum([ float(r[m]) for r in float_people_reports if r['department_id'] == d_id])
+                      )
+                  yield g
+
+          # Project report clients
+          g = GaugeMetricFamily(
+              'float_project_report_clients',
+              'Number of clients worked for',
+              labels=['days']
+              )
+          g.add_metric(
+              [period['name']],
+              len(set([ p['client_id'] for p in float_project_reports ]))
+              )
+          yield g
+
+          # Project report projects
+          g = GaugeMetricFamily(
+              'float_project_report_projects',
+              'The number of projects worked for'.format(m),
+              labels=['days']
+              )
+          g.add_metric(
+              [period['name']],
+              len(set([ p['project_id'] for p in float_project_reports ]))
+              )
+          yield g
+
+          # END DATE BASED DATA
+
 
         logging.info("Done getting data from Float.")
+
+        # Report date from Float OK. We would have
+        # returned earlier if it was not
+        float_up.add_metric([], 1)
+        yield float_up
 
 
 def parse_args():
