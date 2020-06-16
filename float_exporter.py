@@ -110,7 +110,7 @@ class FloatCollector(object):
             )
         g.add_metric(
             [str(REPORT_DAYS)],
-            sum(set([ t['people_id'] for t in float_tasks ]))
+            len(set([ t['people_id'] for t in float_tasks ]))
             )
         yield g
 
