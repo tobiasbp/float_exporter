@@ -199,22 +199,33 @@ class FloatCollector(object):
             yield g
 
 
+        ###################
         # TIME BASED DATA #
+        ###################
 
         # Loop through the periods to report for
         for period in REPORT_PERIODS:
+          
+          try:
+            # People reports
+            float_people_reports = self.api.get_people_reports(
+              start_date=period['start_date'], end_date=period['end_date'])
+  
+            # Project reports
+            float_project_reports = self.api.get_project_reports(
+              start_date=period['start_date'], end_date=period['end_date'])
+  
+            # Tasks
+            float_tasks = self.api.get_all_tasks(
+              start_date=period['start_date'], end_date=period['end_date'])
+          except Exception as e:
+            logging.error("Exception when getting data from Float: {}"
+              .format(e))
+            # Report missing data and return
+            float_up.add_metric([], 0)
+            yield float_up
+            return
 
-          # People reports
-          float_people_reports = self.api.get_people_reports(
-            start_date=period['start_date'], end_date=period['end_date'])
-
-          # Project reports
-          float_project_reports = self.api.get_project_reports(
-            start_date=period['start_date'], end_date=period['end_date'])
-
-          # Tasks
-          float_tasks = self.api.get_all_tasks(
-            start_date=period['start_date'], end_date=period['end_date'])
 
           # Number of tasks
           for p in [0, 1]:
