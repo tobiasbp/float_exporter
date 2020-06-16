@@ -416,12 +416,24 @@ def main():
           handlers = logging_handlers
           )
 
+        # Make sure we have an email
+        if not args.email:
+          raise ValueError("You must supply an email. Use environment "
+            "variable FLOAT_EMAIL or flag --email")
+
+        # Make sure we have a user agent
+        if not args.user_agent:
+          raise ValueError("You must supply a user agent string. "
+            "Use environment variable FLOAT_USER_AGENT or flag --user-agent")
+
+        # Make sure we have an access token
+        if not args.access_token:
+          raise ValueError("You must supply a Float access token. "
+            "Use environment variable FLOAT_ACCESS_TOKEN or flag --access-token")
+
         logging.info("Starting float_exporter")
 
         # Instantiate Float API
-        if not args.email:
-          raise ValueError("You must supply an email")
-
         float_api = FloatAPI(
             args.access_token,
             args.user_agent,
