@@ -455,7 +455,7 @@ def main():
             exit(1)
 
         # Overwrite config with values in config file
-        args_file = parse_config(args_cli.config_file)
+        args_file = parse_config(config['config_file'])
         for a_name, a_value in args_file.items():
           if a_value and a_name in config.keys():
             config[a_name] = a_value
