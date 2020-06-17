@@ -1,0 +1,18 @@
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: fe-configmap
+  namespace: automation
+data:
+  float_exporter.yml: |
+    email: 'me@example.org'
+    user_agent: 'Prometheus float_exporter'
+    # Specify to enable logging to file
+    #log_file: '/var/log/float_exporter.log'
+    log_level: 'INFO'
+    # Use the fe-secret to set the environment
+    # variable FLOAT_ACCESS_TOKEN
+    #access_token: 'MY_SECRET_TOKEN'
+    #port: 9709
+    report_days: [7, 14]
+

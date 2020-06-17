@@ -1,4 +1,7 @@
+# Local configuration files with user's secrets
 float_exporter.local.yml
+fe-secret.local.yml
+fe-configmap.local.yml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
