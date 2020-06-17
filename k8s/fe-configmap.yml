@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap 
 metadata:
   name: fe-configmap
-  namespace: automation
+  namespace: monitoring
 data:
   float_exporter.yml: |
     email: 'me@example.org'

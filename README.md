@@ -35,6 +35,21 @@ When setting a parameter using an environment variable, you should prefix the
 parameter name in uppercase with the string *FLOAT_*. To set the access token to use
 you would need to specify the environment variable *FLOAT_ACCESS_TOKEN*.
 
+# Run in Kubernetes
+Run *float_exporter* as a servive in a Kubernetes cluster managed by *kubectl*.
+This section refers to files in directory *k8s*.
+All files uses namespace *automation*. If you want to use a different namespace,
+you can change the configuration files accordingly.
+
+* Clone repository
+* Add namespace *automation*: `kubectl create -f namespace.yml`
+* Copy *fe-secret.yml* to *fe-secret.local.yml* and add your Float access token
+* Create secret in Kubernetes: `kubectl create -f fe-secret.local.yml`
+* Copy *fe-configmap.yml* to *fe-configmap.local.yml* and change to you liking. You must add a valid email.
+* Create configmap in Kubernetes: `kubectl create -f fe-configmap.local.yml`
+* Create the *fe-svc* service and *fe-dep* deployment in Kubernetes: `kubectl create -f fe-service.yml`
+
+
 # Run locally
 
 * Clone repository
