@@ -1,4 +1,8 @@
 # float_exporter configuration file 
-report_days:
-- 7
-- 14
+email: 'me@example.org'
+user_agent: 'My user agent description'
+#log_file: '/var/log/float_exporter.log'
+log_level: 'INFO'
+access_token: 'MY_SECRET_TOKEN'
+port: 9709
+report_days: []

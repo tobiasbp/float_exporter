@@ -325,7 +325,11 @@ def parse_args():
 
     # Parser object
     parser = argparse.ArgumentParser(
-        description='Exports data from Float to be consumed by Prometheus'
+        description=('Exports data from Float to be consumed by '
+          'Prometheus. Can be configured through config file '
+          '(Lowest priority), environment variables and CLI '
+          '(Highest priority).'
+          )
     )
 
     # Float access token. Default to env variable FLOAT_ACCESS_TOKEN
@@ -335,7 +339,7 @@ def parse_args():
         required=False,
         help=('Access token for accessing the Float API. '
           'Defaults to environment variable FLOAT_ACCESS_TOKEN'),
-        default=os.environ.get('FLOAT_ACCESS_TOKEN', None)
+        default=None
     )
 
     parser.add_argument(
@@ -344,7 +348,7 @@ def parse_args():
         required=False,
         help=('Email to supply as part of User-Agent. '
           'Defaults to environment variable FLOAT_EMAIL'),
-        default=os.environ.get('FLOAT_EMAIL', None)
+        default=None
     )
 
     parser.add_argument(
@@ -353,7 +357,7 @@ def parse_args():
         required=False,
         help=('String to report as User-Agent when getting data from Float. '
           'Defaults to environment variable FLOAT_USER_AGENT'),
-        default=os.environ.get('FLOAT_USER_AGENT', None)
+        default=None
     )
 
     # Port to listen on
@@ -363,7 +367,7 @@ def parse_args():
         required=False,
         type=int,
         help='Port to recieve request on.',
-        default=default_port
+        default=None
     )
 
     # Location of config file
@@ -372,7 +376,7 @@ def parse_args():
         metavar=default_conf_file,
         required=False,
         help='The file to read configuration from.',
-        default=default_conf_file
+        default=None
     )
 
     # Location of log file
@@ -388,7 +392,8 @@ def parse_args():
       "--log-level",
       metavar=default_log_level,
       choices=['DEBUG', 'INFO', 'WARNING', 'ALL'],
-      default=default_log_level,
+      #default=default_log_level,
+      default=None,
       help="Set log level to one of: DEBUG, INFO, WARNING, ALL."
       )
 
@@ -419,20 +424,65 @@ def parse_config(config_file):
 
 
 def main():
-    
+
     try:
+
         # Parse the command line arguments
-        args = parse_args()
+        args_cli = parse_args()
+
+        config = {
+          'log_file': None,
+          'log_level': 'INFO',
+          'disable_log_stdout': False,
+          'email': None,
+          'config_file': '/etc/float_exporter.yml',
+          'user_agent': 'Prometheus float_exporter',
+          'access_token': None,
+          'report_days': [7, 14],
+          'port': 9709
+          }
+
+
+        # Update config_file if supplied by CLI
+        if args_cli.config_file:
+          config['config_file'] = args_cli.config_file
+
+        # Exit with error if specified config file does not exist
+        if not os.path.isfile(config['config_file']):
+            m = ("Error: Config file {} does not exist.".
+              format(config['config_file']))
+            print(m)
+            exit(1)
+
+        # Overwrite config with values in config file
+        args_file = parse_config(args_cli.config_file)
+        for a_name, a_value in args_file.items():
+          if a_value and a_name in config.keys():
+            config[a_name] = a_value
+
+        # Overwrite config with values form env variables.
+        for a_name in config.keys():
+          config[a_name] = os.environ.get(
+            'FLOAT_' + a_name.upper(),
+            config[a_name]
+            )
+
+        # Overwrite config with values from CLI
+        for a_name, a_value in args_cli.__dict__.items():
+          if a_value and a_name in config.keys():
+            config[a_name] = a_value
 
         # A list of logging handlers
         logging_handlers = []
 
-        # Handler for logging to file
-        if args.log_file:
-          logging_handlers.append(logging.FileHandler(args.log_file))
+        # Log to file if we have a log file
+        if config['log_file']:
+          logging_handlers.append(
+            logging.FileHandler(config['log_file'])
+            )
 
         # Log to stdout if not disabled
-        if not args.disable_log_stdout:
+        if not config['disable_log_stdout']:
           logging_handlers.append(logging.StreamHandler())
 
         # Abort if all logging disabled by user
@@ -442,41 +492,34 @@ def main():
 
         # Configure logging
         logging.basicConfig(
-          level = eval("logging." + args.log_level),
+          level = eval("logging." + config['log_level']),
           format='%(asctime)s:%(levelname)s:%(message)s',
           handlers = logging_handlers
           )
 
         # Make sure we have an email
-        if not args.email:
-          raise ValueError("You must supply an email. Use environment "
-            "variable FLOAT_EMAIL or flag --email")
-
-        # Make sure we have a user agent
-        if not args.user_agent:
-          raise ValueError("You must supply a user agent string. "
-            "Use environment variable FLOAT_USER_AGENT or flag --user-agent")
+        if not config['email']:
+          m = "No email configured."
+          logging.error(m)
+          print("Error:", m)
+          exit(1)
 
         # Make sure we have an access token
-        if not args.access_token:
-          raise ValueError("You must supply a Float access token. "
-            "Use environment variable FLOAT_ACCESS_TOKEN or flag --access-token")
-
-        # get values from config or defaults
-        if args.config_file:
-          # Parse the config
-          c = parse_config(args.config_file)
-          # FIXME: Validate config
-          report_days = c['report_days']
-        else:
-          # The default report days
-          report_days = [7, 14]
+        if not config['access_token']:
+          m = "No access token configured"
+          logging.error(m)
+          print("Error:", m)
+          exit(1)
 
         # Store dictionaries defining periods here
         report_periods = []
 
-        # Add the periods based on config
-        for d in report_days:
+        # Log if no report days supplied
+        if len(config['report_days']) == 0:
+          logging.info("Report metrics disabled because of no report_days")
+
+        # Add the periods to report for based on config
+        for d in config['report_days']:
           # Calculate days for the period
           p = {
             'name': str(d),
@@ -488,9 +531,9 @@ def main():
 
         # Instantiate Float API
         float_api = FloatAPI(
-            args.access_token,
-            args.user_agent,
-            args.email,
+            config['access_token'],
+            config['user_agent'],
+            config['email']
             )
 
         logging.info("Starting float_exporter")
@@ -499,7 +542,7 @@ def main():
         REGISTRY.register(FloatCollector(float_api, report_periods))
 
         # Listen for scrape requests.
-        start_http_server(args.port)
+        start_http_server(config['port'])
 
         # Run forever
         while True:
