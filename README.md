@@ -4,10 +4,35 @@ An exporter for Prometheus exposing data from project management service Float a
 When running on *localhost*, *float_exporter* expose metrics at `http://localhost:9709/metrics`
 
 # Metrics
-The metrics exposed by *float_exporter*.
+The metrics exposed by *float_exporter*. The label _days_, is the number of days beeing looked
+in to the future when generating a report. A metric with _days="7"_ would cover the period
+from the time the data was scraped, to _days_ days in the future. 
 
-* ?
-* ?
+* float_accounts{account_type="['account_owner'|'admin'|'billing'|'member'|'project_manager']"}
+* float_clients{}: Total number of clients.
+* float_department_id{name="string"}: Mapping of department name to departmen_id.
+* float_department_members{department_id="int"}: Number of people in department FIXME: Add department_id to people
+* float_people{people_type=[1|2|3]}: Total number of people
+* float_people_report_billable_hours{days="int",department_id="int"} Number of billable hours.
+* float_people_report_capacity_hours{days="int",department_id="int"} Number of work hours available.
+* float_people_report_nonbillable_hours{days="int",department_id="int"} Number of non billable hours.
+* float_people_report_overtime_hours{days="int",department_id="int"} Number of overtime hours.
+* float_people_report_scheduled_hours{days="int",department_id="int"} Number of scheduled hours.
+* float_people_report_timeoff_hours{days="int",department_id="int"} Number of timeoff hours.
+* float_people_report_unscheduled_hours{days="int",department_id="int"} Number of unscheduled hours.
+* float_project_report_clients{days="int"} Number of clients worked for
+* float_project_report_projects{days="int"} Number of projects worked on
+* float_projects{active="[0|1]"} Total number of projects
+* float_projects_billable{active="[0|1]"} Total number of billable projects 
+* float_projects_budget{type"=[1|2|3]"} Sum of project budgets FIXME: I Probably want to know it something about start/end dates
+* FIXME: Number of projects with budget of type
+* float_tasks{days="int",priority="[0|1]",status="['complete'|'confirmed'|'tentative']} Number of tasks.
+* float_tasks_hours{days="int"} Number of task hours. 
+* float_tasks_people{days="int"} Number of people with assigned tasks. 
+* float_up{} Is data beeing pulled from Float? 0 = no, 1 = yes.
+
+
+* float_accounts{priority="[0|1]",status=['complete'|'confirmed'|'tentative']}
 
 # Configuration
 How to configure *float_exporter*.
@@ -79,6 +104,8 @@ replicaset.apps/fe-dep-xxxx                 1         1         1       18h
 * Copy config file *float_exporter.yml* to *float_exporter.local.yml*
 * Update *float_exporter.local.yml* with your configuration.
 * Run float_exporter.py: `./float_exporter.py ./float_exporter.local.yml`
+* You should see the log from float_exporter confirming a successful run.
+* You should be able to see your metrics at `http://localhost:9709/metrics`
 
 # Run in Docker
 
@@ -93,6 +120,7 @@ How to run with configuration in a file.
 * Update */example/path/float_exporter.yml* with your configuration.
 * Run the container: `docker run --rm -p 9709:9709 -v /example/path/float_exporter.yml:/etc/float_exporter.yml float_exporter`
 * You should see the log from float_exporter confirming a successful run.
+* You should be able to see your metrics at `http://localhost:9709/metrics`
 
 ## Configuration with environment variables
 If you don't want to map an external config file to the container, you can pass
