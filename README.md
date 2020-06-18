@@ -38,16 +38,38 @@ you would need to specify the environment variable *FLOAT_ACCESS_TOKEN*.
 # Run in Kubernetes
 Run *float_exporter* as a servive in a Kubernetes cluster managed by *kubectl*.
 This section refers to files in directory *k8s*.
-All files uses namespace *automation*. If you want to use a different namespace,
+All files uses namespace *monitoring*. If you want to use a different namespace,
 you can change the configuration files accordingly.
 
 * Clone repository
-* Add namespace *automation*: `kubectl create -f namespace.yml`
+* Add namespace *monitoring*: `kubectl create -f fe-namespace.yml`
 * Copy *fe-secret.yml* to *fe-secret.local.yml* and add your Float access token
 * Create secret in Kubernetes: `kubectl create -f fe-secret.local.yml`
 * Copy *fe-configmap.yml* to *fe-configmap.local.yml* and change to you liking. You must add a valid email.
 * Create configmap in Kubernetes: `kubectl create -f fe-configmap.local.yml`
 * Create the *fe-svc* service and *fe-dep* deployment in Kubernetes: `kubectl create -f fe-service.yml`
+* Forward you local port 9709 to the *float_exporter* service: `kubectl port-forward -n monitoring service/fe-svc 9709:9709`
+* You should be able to see your metrics at `http://localhost:9709/metrics`
+
+When running, you should see a pod, a deployment (with replicaset) and a service in the *monitoring* namespace:
+
+```
+kubectl get all -n monitoring
+
+NAME                                  READY   STATUS      RESTARTS   AGE...
+pod/fe-dep-xxx-xxx                    1/1     Running     0          18h
+
+NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)     AGE
+service/fe-svc                 ClusterIP   xx.xx.xx.xx      <none>        9709/TCP    18h
+
+NAME                             READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/fe-dep           1/1     1            1           18h
+
+NAME                                        DESIRED   CURRENT   READY   AGE
+replicaset.apps/fe-dep-xxxx                 1         1         1       18h
+```
+
+
 
 
 # Run locally
