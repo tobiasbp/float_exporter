@@ -2,6 +2,7 @@
 float_exporter.local.yml
 fe-secret.local.yml
 fe-configmap.local.yml
+config.local.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
