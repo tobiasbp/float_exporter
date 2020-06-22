@@ -7,19 +7,12 @@ import os
 import time
 
 from prometheus_client import start_http_server, Summary
-from prometheus_client.core import GaugeMetricFamily, HistogramMetricFamily, REGISTRY
+from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from float_api import FloatAPI, UnexpectedStatusCode, DataValidationError
 import yaml
 
 # Create a metric to track time spent and requests made.
-#REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
-
-# Decorate function with metric.
-#@REQUEST_TIME.time()
-#def process_request(t):
-#    """A dummy function that takes some time."""
-#    time.sleep(t)
-#TEAM_NAME = "foobar team"
+REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
 
 # Map task statuses to names
 TASK_STATUSES = {
@@ -47,7 +40,7 @@ class FloatCollector(object):
       # List of periods to report for
       self.report_periods = report_periods
 
-
+    @REQUEST_TIME.time()
     def collect(self):
 
         logging.info("Recieved request.")
@@ -78,7 +71,7 @@ class FloatCollector(object):
         for a_id, a_name in ACCOUNT_TYPES.items():
           g = GaugeMetricFamily(
               'float_accounts',
-              'The total number of accounts',
+              'Number of accounts',
               labels=['account_type']
               )
           g.add_metric(
@@ -105,7 +98,7 @@ class FloatCollector(object):
         for e_type in [1,2,3]:
             g = GaugeMetricFamily(
                 'float_people',
-                'The number of people',
+                'Number of people',
                 labels=['people_type']
                 )
             g.add_metric(
@@ -119,7 +112,7 @@ class FloatCollector(object):
         for is_active in [0, 1]:
             g = GaugeMetricFamily(
                 'float_projects',
-                'The number of projects',
+                'Number of projects',
                 labels=['active']
                 )
             g.add_metric(
@@ -129,28 +122,40 @@ class FloatCollector(object):
             yield g
 
 
-        # Budget
+        # Budget sum
         for budget_type in [1,2,3]:
             g = GaugeMetricFamily(
-                'float_projects_budget',
+                'float_projects_budget_sum',
                 'The sum of project budgets',
                 labels=['type']
                 )
-            d = [float(p['budget_total']) for p in float_projects if p['budget_type'] == budget_type]
+            # List of budgets as floats
+            budgets = [float(p['budget_total']) for p in float_projects if p['budget_type'] == budget_type]
             g.add_metric(
                 [str(budget_type)],
-                sum(d),
+                sum(budgets),
                 )
             yield g
 
-        # FIXME: Number of projects with budget
+        # Number of projects with budget
+        for budget_type in [1,2,3]:
+            g = GaugeMetricFamily(
+                'float_projects_with_budget',
+                'Number of projects with budgets',
+                labels=['type']
+                )
+            g.add_metric(
+                [str(budget_type)],
+                len([ p for p in float_projects if p['budget_type'] == budget_type])
+                )
+            yield g
 
 
         # Number of billable projects
         for is_active in [0, 1]:
             g = GaugeMetricFamily(
                 'float_projects_billable',
-                'The number of billable projects in the team',
+                'Number of billable projects',
                 labels=['active']
                 )
             g.add_metric(

@@ -24,14 +24,12 @@ from the time the data was scraped, to _days_ days in the future.
 * float_project_report_projects{days="int"} Number of projects worked on
 * float_projects{active="[0|1]"} Total number of projects
 * float_projects_billable{active="[0|1]"} Total number of billable projects 
-* float_projects_budget{type"=[1|2|3]"} Sum of project budgets FIXME: I Probably want to know it something about start/end dates
-* FIXME: Number of projects with budget of type
+* float_projects_budget_sum{type"=[1|2|3]"} Sum of project budgets
+* float_projects_with_budget{type"=[1|2|3]"} Number of projects with a budget
 * float_tasks{days="int",priority="[0|1]",status="['complete'|'confirmed'|'tentative']} Number of tasks.
 * float_tasks_hours{days="int"} Number of task hours. 
 * float_tasks_people{days="int"} Number of people with assigned tasks. 
 * float_up{} Is data beeing pulled from Float? 0 = no, 1 = yes.
-
-
 * float_accounts{priority="[0|1]",status=['complete'|'confirmed'|'tentative']}
 
 # Configuration
@@ -59,6 +57,20 @@ The following parameters make up the configuration of *float_exporter*.
 When setting a parameter using an environment variable, you should prefix the
 parameter name in uppercase with the string *FLOAT_*. To set the access token to use
 you would need to specify the environment variable *FLOAT_ACCESS_TOKEN*.
+
+# Run in Kubernetes with helm
+Install *float_exporter* in a Kubernetes cluster from a helm chart. You are assumed to have helm
+running on your machine. The following will install in namespace *default*.
+
+* Clone repository
+* Go to dir: `cd helm`
+* Copy *config.yaml* to *config.local.yaml*
+* Update *config.local.yaml* with your configuration
+* Install: `helm install -f config.local.yml my-float-exporter ./float_exporter`
+* You should see *my-float-exporter* running: `helm list`
+
+To uninstall: `helm uninstall my-float-exporter`
+
 
 # Run in Kubernetes
 Run *float_exporter* as a servive in a Kubernetes cluster managed by *kubectl*.
