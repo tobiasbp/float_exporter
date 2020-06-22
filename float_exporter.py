@@ -529,6 +529,12 @@ def main():
           # Add the period
           report_periods.append(p)
 
+        # Log config
+        for key, value in config.items():
+          if key == "access_token":
+            value = "{}{}{}".format(value[0:3], "*******", value[-3:])
+          logging.debug("Config {}: {}".format(key, value))
+
         # Instantiate Float API
         float_api = FloatAPI(
             config['access_token'],
