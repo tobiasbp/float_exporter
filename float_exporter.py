@@ -68,129 +68,157 @@ class FloatCollector(object):
           return
 
         # Number of accounts
-        for a_id, a_name in ACCOUNT_TYPES.items():
-          g = GaugeMetricFamily(
-              'float_accounts',
-              'Number of accounts',
-              labels=['account_type']
-              )
-          g.add_metric(
-              [a_name],
-              len([a for a in float_accounts if a['account_type'] == a_id])
-              )
-          yield g
+        try:
+            for a_id, a_name in ACCOUNT_TYPES.items():
+              g = GaugeMetricFamily(
+                  'float_accounts',
+                  'Number of accounts',
+                  labels=['account_type']
+                  )
+              g.add_metric(
+                  [a_name],
+                  len([a for a in float_accounts if a['account_type'] == a_id])
+                  )
+              yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_accounts': {}".format(e))
 
 
         # Number of clients
-        g = GaugeMetricFamily(
-            'float_clients',
-            'Number of clients',
-            labels=[]
-            )
-        g.add_metric(
-            [],
-            len(float_clients),
-            )
-        yield g
+        try:
+            g = GaugeMetricFamily(
+                'float_clients',
+                'Number of clients',
+                labels=[]
+                )
+            g.add_metric(
+                [],
+                len(float_clients),
+                )
+            yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_clients': {}".format(e))
 
 
         # Number of people
-        for e_type in [1,2,3]:
-            g = GaugeMetricFamily(
-                'float_people',
-                'Number of people',
-                labels=['people_type']
-                )
-            g.add_metric(
-                [str(e_type)],
-                len([p for p in float_people if p['people_type_id'] == e_type]),
-                )
-            yield g
+        try:
+            for e_type in [1,2,3]:
+                g = GaugeMetricFamily(
+                    'float_people',
+                    'Number of people',
+                    labels=['people_type']
+                    )
+                g.add_metric(
+                    [str(e_type)],
+                    len([p for p in float_people if p['people_type_id'] == e_type]),
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_people': {}".format(e))
 
 
         # Number of projects
-        for is_active in [0, 1]:
-            g = GaugeMetricFamily(
-                'float_projects',
-                'Number of projects',
-                labels=['active']
-                )
-            g.add_metric(
-                [str(is_active)],
-                len([p for p in float_projects if p['active'] == is_active]),
-                )
-            yield g
+        try:
+            for is_active in [0, 1]:
+                g = GaugeMetricFamily(
+                    'float_projects',
+                    'Number of projects',
+                    labels=['active']
+                    )
+                g.add_metric(
+                    [str(is_active)],
+                    len([p for p in float_projects if p['active'] == is_active]),
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_projects': {}".format(e))
 
 
         # Budget sum
-        for budget_type in [1,2,3]:
-            g = GaugeMetricFamily(
-                'float_projects_budget_sum',
-                'The sum of project budgets',
-                labels=['type']
-                )
-            # List of budgets as floats
-            budgets = [float(p['budget_total']) for p in float_projects if p['budget_type'] == budget_type]
-            g.add_metric(
-                [str(budget_type)],
-                sum(budgets),
-                )
-            yield g
+        try:
+            for budget_type in [1,2,3]:
+                g = GaugeMetricFamily(
+                    'float_projects_budget_sum',
+                    'The sum of project budgets',
+                    labels=['type']
+                    )
+                # List of budgets as floats
+                budgets = [float(p['budget_total']) for p in float_projects if p['budget_type'] == budget_type]
+                g.add_metric(
+                    [str(budget_type)],
+                    sum(budgets),
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_projects_budget_sum': {}".format(e))
+
 
         # Number of projects with budget
-        for budget_type in [1,2,3]:
-            g = GaugeMetricFamily(
-                'float_projects_with_budget',
-                'Number of projects with budgets',
-                labels=['type']
-                )
-            g.add_metric(
-                [str(budget_type)],
-                len([ p for p in float_projects if p['budget_type'] == budget_type])
-                )
-            yield g
+        try:
+            for budget_type in [1,2,3]:
+                g = GaugeMetricFamily(
+                    'float_projects_with_budget',
+                    'Number of projects with budgets',
+                    labels=['type']
+                    )
+                g.add_metric(
+                    [str(budget_type)],
+                    len([ p for p in float_projects if p['budget_type'] == budget_type])
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_tasks': {}".format(e))
 
 
         # Number of billable projects
-        for is_active in [0, 1]:
-            g = GaugeMetricFamily(
-                'float_projects_billable',
-                'Number of billable projects',
-                labels=['active']
-                )
-            g.add_metric(
-                [str(is_active)],
-                len([p for p in float_projects if p['active'] == is_active and p['non_billable'] == 0]),
-                )
-            yield g
+        try:
+            for is_active in [0, 1]:
+                g = GaugeMetricFamily(
+                    'float_projects_billable',
+                    'Number of billable projects',
+                    labels=['active']
+                    )
+                g.add_metric(
+                    [str(is_active)],
+                    len([p for p in float_projects if p['active'] == is_active and p['non_billable'] == 0]),
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_projects_billable': {}".format(e))
 
 
         # Number of people in departments
-        for d in float_departments:
-            g = GaugeMetricFamily(
-                'float_department_members',
-                'Number of members in department',
-                labels=['department_id']
-                )
-            g.add_metric(
-                [str(d['department_id'])],
-                len([p for p in float_people if p['department'] and d['department_id'] in p['department'].values()]),
-                )
-            yield g
+        try:
+            for d in float_departments:
+                g = GaugeMetricFamily(
+                    'float_department_members',
+                    'Number of members in department',
+                    labels=['department_id']
+                    )
+                g.add_metric(
+                    [str(d['department_id'])],
+                    len([p for p in float_people if p['department'] and d['department_id'] in p['department'].values()]),
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_department_members': {}".format(e))
 
 
         # Department_id name mapping
-        for d in float_departments:
-            g = GaugeMetricFamily(
-                'float_department_id',
-                'ID of department',
-                labels=['name']
-                )
-            g.add_metric(
-                [d['name']],
-                d['department_id'],
-                )
-            yield g
+        try:
+            for d in float_departments:
+                g = GaugeMetricFamily(
+                    'float_department_id',
+                    'ID of department',
+                    labels=['name']
+                    )
+                g.add_metric(
+                    [d['name']],
+                    d['department_id'],
+                    )
+                yield g
+        except Exception as e:
+            logging.error("Could not build build metric 'float_department_id': {}".format(e))
 
 
         ###################
@@ -201,6 +229,7 @@ class FloatCollector(object):
         #for period in REPORT_PERIODS:
         for period in self.report_periods:
           
+          # Get the data from Float
           try:
             # People reports
             float_people_reports = self.api.get_people_reports(
@@ -221,46 +250,59 @@ class FloatCollector(object):
             yield float_up
             return
 
-
           # Number of tasks
-          for p in [0, 1]:
-            for s_id, s_name in TASK_STATUSES.items():
-              g = GaugeMetricFamily(
-                  'float_tasks',
-                  'Number of tasks',
-                  labels=['priority', 'status', 'days']
-                  )
-              g.add_metric(
-                  [str(p), s_name, period['name']],
-                  len([t for t in float_tasks if t['priority'] == p and t['status'] == s_id])
-                  )
-              yield g
+          try:
+              for p in [0, 1]:
+                for s_id, s_name in TASK_STATUSES.items():
+                  g = GaugeMetricFamily(
+                      'float_tasks',
+                      'Number of tasks',
+                      labels=['priority', 'status', 'days']
+                      )
+                  g.add_metric(
+                      [str(p), s_name, period['name']],
+                      len([t for t in float_tasks if t['priority'] == p and t['status'] == s_id])
+                      )
+                  yield g
+          except Exception as e:
+              logging.error("{}: {} when building metric 'float_tasks'".format(type(e).__name__, e))
+
 
           # Sum of task hours
-          g = GaugeMetricFamily(
-              'float_tasks_hours',
-              'Sum of task hours',
-              labels=['days']
-              )
-          g.add_metric(
-              [period['name']],
-              sum([ float(t['hours']) for t in float_tasks ])
-              )
-          yield g
+          try:
+              g = GaugeMetricFamily(
+                  'float_tasks_hours',
+                  'Sum of task hours',
+                  labels=['days']
+                  )
+              g.add_metric(
+                  [period['name']],
+                  sum([ float(t['hours']) for t in float_tasks ])
+                  )
+              yield g
+          except Exception as e:
+              logging.error("Could not build build metric 'float_tasks_hours': {}".format(e))
+
 
           # Number of people with tasks
-          g = GaugeMetricFamily(
-              'float_tasks_people',
-              'Number of people with tasks',
-              labels=['days']
-              )
-          g.add_metric(
-              [period['name']],
-              len(set([ t['people_id'] for t in float_tasks ]))
-              )
-          yield g
+          try:
+              g = GaugeMetricFamily(
+                  'float_tasks_people',
+                  'Number of people with tasks',
+                  labels=['days']
+                  )
+              g.add_metric(
+                  [period['name']],
+                  len(set([ t['people_id'] for t in float_tasks ]))
+                  )
+              yield g
+          except Exception as e:
+              logging.error("Could not build build metric 'float_tasks_people': {}".format(e))
+
 
           # People report
+          
+          # Create metrics for these fields
           metrics = [
             'overtime',
             'billable',
@@ -270,42 +312,51 @@ class FloatCollector(object):
             'unscheduled',
             'timeoff'
             ]
-          for m in metrics:
-              for d_id in [d['department_id'] for d in float_departments]:
-                  g = GaugeMetricFamily(
-                      'float_people_report_{}_hours'.format(m.lower()),
-                      'Number of {} hours'.format(m.lower()),
-                      labels=['department_id', 'days']
-                      )
-                  g.add_metric(
-                      [str(d_id), period['name']],
-                      sum([ float(r[m]) for r in float_people_reports if r['department_id'] == d_id])
-                      )
-                  yield g
+          try:
+              for m in metrics:
+                  for d_id in [d['department_id'] for d in float_departments]:
+                      g = GaugeMetricFamily(
+                          'float_people_report_{}_hours'.format(m.lower()),
+                          'Number of {} hours'.format(m.lower()),
+                          labels=['department_id', 'days']
+                          )
+                      g.add_metric(
+                          [str(d_id), period['name']],
+                          sum([ float(r[m]) for r in float_people_reports if r['department_id'] == d_id])
+                          )
+                      yield g
+          except Exception as e:
+              logging.error("Could not build build metric 'float_people_report_x_hours': {}".format(e))
 
           # Project report clients
-          g = GaugeMetricFamily(
-              'float_project_report_clients',
-              'Number of clients worked for',
-              labels=['days']
-              )
-          g.add_metric(
-              [period['name']],
-              len(set([ p['client_id'] for p in float_project_reports ]))
-              )
-          yield g
+          try:
+              g = GaugeMetricFamily(
+                  'float_project_report_clients',
+                  'Number of clients worked for',
+                  labels=['days']
+                  )
+              g.add_metric(
+                  [period['name']],
+                  len(set([ p['client_id'] for p in float_project_reports ]))
+                  )
+              yield g
+          except Exception as e:
+              logging.error("Could not build build metric 'float_project_report_clients': {}".format(e))
 
           # Project report projects
-          g = GaugeMetricFamily(
-              'float_project_report_projects',
-              'The number of projects worked for'.format(m),
-              labels=['days']
-              )
-          g.add_metric(
-              [period['name']],
-              len(set([ p['project_id'] for p in float_project_reports ]))
-              )
-          yield g
+          try:
+              g = GaugeMetricFamily(
+                  'float_project_report_projects',
+                  'The number of projects worked for'.format(m),
+                  labels=['days']
+                  )
+              g.add_metric(
+                  [period['name']],
+                  len(set([ p['project_id'] for p in float_project_reports ]))
+                  )
+              yield g
+          except Exception as e:
+              logging.error("Could not build build metric 'float_project_report_projects': {}".format(e))
 
           # END DATE BASED DATA
 
